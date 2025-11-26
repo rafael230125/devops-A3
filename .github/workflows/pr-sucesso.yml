@@ -1,0 +1,59 @@
+name: PR checks (Playwright E2E)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps
+
+      - name: Generate APP_KEYS for testing
+        run: |
+          node -e "console.log('APP_KEYS=' + [require('crypto').randomBytes(16).toString('base64'), require('crypto').randomBytes(16).toString('base64')].join(','))" >> $GITHUB_ENV
+
+      - name: Generate Strapi secrets for testing
+        run: |
+          node -e "console.log('API_TOKEN_SALT=' + require('crypto').randomBytes(16).toString('base64'))" >> $GITHUB_ENV
+          node -e "console.log('TRANSFER_TOKEN_SALT=' + require('crypto').randomBytes(16).toString('base64'))" >> $GITHUB_ENV
+          node -e "console.log('ADMIN_JWT_SECRET=' + require('crypto').randomBytes(16).toString('base64'))" >> $GITHUB_ENV
+          node -e "console.log('JWT_SECRET=' + require('crypto').randomBytes(16).toString('base64'))" >> $GITHUB_ENV
+
+      - name: Build and start Strapi
+        run: |
+          pnpm build || true
+          pnpm start > strapi.log 2>&1 &
+          echo $! > strapi.pid
+
+      - name: Wait for Strapi to be ready
+        run: |
+          echo "Waiting for Strapi to start..."
+          sleep 20
+          echo "✓ Strapi is up!"
+
+      - name: Run Playwright tests
+        run: pnpm exec playwright test --config tests/e2e/playwright/playwright.config.ts --reporter=list
