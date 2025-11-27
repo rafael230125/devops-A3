@@ -131,6 +131,10 @@ data "aws_iam_policy_document" "ecs_task_assume_role" {
 resource "aws_iam_role" "task_exec" {
   name               = "ecsTaskExecutionRole-${var.cluster_name}"
   assume_role_policy = data.aws_iam_policy_document.ecs_task_assume_role.json
+
+  lifecycle {
+    ignore_changes = [assume_role_policy]
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "exec_policy" {
