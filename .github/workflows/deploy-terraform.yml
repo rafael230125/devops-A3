@@ -54,7 +54,7 @@ jobs:
 
       - name: Terraform Plan
         working-directory: infra/terraform
-        run: terraform plan -var "image=${{ secrets.DEPLOY_IMAGE }}" -out=plan.tfplan
+        run: terraform plan -var "image=${{ vars.ECR_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest" -out=plan.tfplan
 
       - name: Terraform Apply
         working-directory: infra/terraform
