@@ -147,7 +147,7 @@ resource "aws_iam_role_policy_attachment" "exec_policy" {
 #############################################
 
 resource "aws_ecs_task_definition" "app" {
-  family                   = "strapi-a3-task"
+  family                   = "strapi-a1-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "256"
@@ -156,7 +156,7 @@ resource "aws_ecs_task_definition" "app" {
 
   container_definitions = jsonencode([
     {
-      name      = "strapi-a3"
+      name      = "strapi-a1"
       image     = var.image
       essential = true
       portMappings = [
@@ -175,7 +175,7 @@ resource "aws_ecs_task_definition" "app" {
 #############################################
 
 resource "aws_lb" "app" {
-  name               = "strapi-a3-alb"
+  name               = "strapi-a1-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb_sg.id]
@@ -183,7 +183,7 @@ resource "aws_lb" "app" {
 }
 
 resource "aws_lb_target_group" "app" {
-  name        = "strapi-a3-tg"
+  name        = "strapi-a1-tg"
   port        = 1337
   protocol    = "HTTP"
   vpc_id      = local.vpc_id
@@ -234,7 +234,7 @@ resource "aws_ecs_service" "app" {
 
   load_balancer {
     target_group_arn = aws_lb_target_group.app.arn
-    container_name   = "strapi-a3"
+    container_name   = "strapi-a1"
     container_port   = 1337
   }
 
