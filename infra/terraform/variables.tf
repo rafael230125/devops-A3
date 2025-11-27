@@ -12,5 +12,5 @@ variable "image" {
 variable "cluster_name" {
   description = "ECS cluster name"
   type        = string
-  default     = "devops-a3-cluster2"
+  default     = "devops-a3-cluster3"
 }
