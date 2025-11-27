@@ -1,7 +1,7 @@
 variable "region" {
   description = "AWS region"
   type        = string
-  default     = "us-east-2"
+  default     = "us-west-1"
 }
 
 variable "image" {
@@ -12,5 +12,5 @@ variable "image" {
 variable "cluster_name" {
   description = "ECS cluster name"
   type        = string
-  default     = "devops-a3-cluster3"
+  default     = "devops-a3-cluster1"
 }
