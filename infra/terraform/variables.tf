@@ -1,7 +1,7 @@
 variable "region" {
   description = "AWS region"
   type        = string
-  default     = "eu-west-1"
+  default     = "us-west-2"
 }
 
 variable "image" {
@@ -12,13 +12,13 @@ variable "image" {
 variable "cluster_name" {
   description = "ECS cluster name"
   type        = string
-  default     = "devops-a3-cluster-v1"
+  default     = "devops-a3-cluster-v2"
 }
 
 variable "name_prefix" {
   description = "Base prefix for all resource names (e.g. strapi-a3)"
   type        = string
-  default     = "strapi-a3-v1"
+  default     = "strapi-a3-v2"
 }
 
 variable "version_suffix" {
