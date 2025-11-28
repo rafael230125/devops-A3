@@ -131,10 +131,6 @@ data "aws_iam_policy_document" "ecs_task_assume_role" {
 resource "aws_iam_role" "task_exec" {
   name               = "ecsTaskExecutionRole-${var.cluster_name}"
   assume_role_policy = data.aws_iam_policy_document.ecs_task_assume_role.json
-
-  lifecycle {
-    ignore_changes = all
-  }
 }
 
 resource "aws_iam_role_policy_attachment" "exec_policy" {
@@ -197,10 +193,6 @@ resource "aws_lb_target_group" "app" {
     timeout             = 5
     healthy_threshold   = 2
     unhealthy_threshold = 2
-  }
-
-  lifecycle {
-    ignore_changes = all
   }
 }
 

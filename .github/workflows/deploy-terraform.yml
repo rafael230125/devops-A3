@@ -25,37 +25,24 @@ jobs:
 
       - name: Terraform Init
         working-directory: infra/terraform
-        run: terraform init
+        run: terraform init -input=false
 
-      - name: Import existing resources
+      - name: Terraform Destroy (reset infra)
         working-directory: infra/terraform
+        continue-on-error: true
         run: |
-          echo "🔍 Checking for existing AWS resources..."
-          
-          # Check IAM Role
-          if aws iam get-role --role-name "ecsTaskExecutionRole-devops-a3-cluster" 2>/dev/null; then
-            echo "✅ IAM Role found, importing..."
-            terraform import -auto-approve aws_iam_role.task_exec "ecsTaskExecutionRole-devops-a3-cluster" || true
-          fi
-          
-          # Check Target Group
-          TG_ARN=$(aws elbv2 describe-target-groups --names "strapi-a3-tg" --region us-east-1 --query 'TargetGroups[0].TargetGroupArn' --output text 2>/dev/null)
-          if [ "$TG_ARN" != "None" ] && [ ! -z "$TG_ARN" ]; then
-            echo "✅ Target Group found, importing..."
-            terraform import -auto-approve aws_lb_target_group.app "$TG_ARN" || true
-          fi
-          
-          # Check VPC
-          VPC_ID=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=devops-a3-vpc" --region us-east-1 --query 'Vpcs[0].VpcId' --output text 2>/dev/null)
-          if [ "$VPC_ID" != "None" ] && [ ! -z "$VPC_ID" ]; then
-            echo "✅ VPC found, importing..."
-            terraform import -auto-approve aws_vpc.main "$VPC_ID" || true
-          fi
+          echo "🧨 Destroying previous infrastructure (if exists)..."
+          terraform destroy -auto-approve -input=false || echo "No existing state to destroy"
+          echo "✅ Destroy step finished"
 
-      - name: Terraform Plan
+      - name: Terraform Re-Init (after destroy)
         working-directory: infra/terraform
-        run: terraform plan -var "image=${{ vars.ECR_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest" -out=plan.tfplan
+        run: terraform init -input=false
 
-      - name: Terraform Apply
+      - name: Terraform Plan (fresh deploy)
         working-directory: infra/terraform
-        run: terraform apply -auto-approve plan.tfplan
+        run: terraform plan -input=false -var "image=${{ secrets.ECR_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest" -out=plan.tfplan
+
+      - name: Terraform Apply (fresh infra)
+        working-directory: infra/terraform
+        run: terraform apply -input=false -auto-approve plan.tfplan
