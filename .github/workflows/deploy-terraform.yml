@@ -8,6 +8,10 @@ on:
 jobs:
   terraform-deploy:
     runs-on: ubuntu-latest
+    env:
+      TF_IN_AUTOMATION: true
+      TF_INPUT: false
+      TF_VAR_image: ${{ secrets.ECR_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest
     steps:
       - uses: actions/checkout@v4
 
@@ -25,7 +29,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: infra/terraform
-        run: terraform init
+        run: terraform init -input=false
 
       - name: Import existing resources
         working-directory: infra/terraform
@@ -54,7 +58,7 @@ jobs:
 
       - name: Terraform Plan
         working-directory: infra/terraform
-        run: terraform plan -var "image=${{ secrets.ECR_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest" -out=plan.tfplan
+        run: terraform plan -input=false -out=plan.tfplan
 
       - name: Terraform Apply
         working-directory: infra/terraform
