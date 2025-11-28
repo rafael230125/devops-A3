@@ -19,7 +19,8 @@ resource "aws_vpc" "main" {
   enable_dns_support   = true
 
   tags = {
-    Name = "devops-a3-vpc"
+    Name        = "${var.name_prefix}-vpc"
+    Environment = var.environment
   }
 }
 
@@ -35,7 +36,8 @@ resource "aws_internet_gateway" "main" {
   vpc_id = local.vpc_id
 
   tags = {
-    Name = "devops-a3-igw"
+    Name        = "${var.name_prefix}-igw"
+    Environment = var.environment
   }
 }
 
@@ -52,7 +54,8 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name = "devops-a3-rt"
+    Name        = "${var.name_prefix}-rt"
+    Environment = var.environment
   }
 }
 
@@ -87,7 +90,7 @@ resource "aws_route_table_association" "public" {
 #############################################
 
 resource "aws_security_group" "alb_sg" {
-  name        = "alb-sg"
+  name        = "${var.name_prefix}-alb-sg"
   description = "Allow HTTP"
   vpc_id      = local.vpc_id
 
@@ -131,10 +134,6 @@ data "aws_iam_policy_document" "ecs_task_assume_role" {
 resource "aws_iam_role" "task_exec" {
   name               = "ecsTaskExecutionRole-${var.cluster_name}"
   assume_role_policy = data.aws_iam_policy_document.ecs_task_assume_role.json
-
-  lifecycle {
-    ignore_changes = all
-  }
 }
 
 resource "aws_iam_role_policy_attachment" "exec_policy" {
@@ -147,7 +146,7 @@ resource "aws_iam_role_policy_attachment" "exec_policy" {
 #############################################
 
 resource "aws_ecs_task_definition" "app" {
-  family                   = "strapi-a1-task"
+  family                   = local.task_family
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "256"
@@ -156,7 +155,7 @@ resource "aws_ecs_task_definition" "app" {
 
   container_definitions = jsonencode([
     {
-      name      = "strapi-a1"
+      name      = local.container_name
       image     = var.image
       essential = true
       portMappings = [
@@ -175,7 +174,7 @@ resource "aws_ecs_task_definition" "app" {
 #############################################
 
 resource "aws_lb" "app" {
-  name               = "strapi-a1-alb"
+  name               = local.lb_name
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb_sg.id]
@@ -183,7 +182,7 @@ resource "aws_lb" "app" {
 }
 
 resource "aws_lb_target_group" "app" {
-  name        = "strapi-a1-tg"
+  name        = local.tg_name
   port        = 1337
   protocol    = "HTTP"
   vpc_id      = local.vpc_id
@@ -197,10 +196,6 @@ resource "aws_lb_target_group" "app" {
     timeout             = 5
     healthy_threshold   = 2
     unhealthy_threshold = 2
-  }
-
-  lifecycle {
-    ignore_changes = all
   }
 }
 
@@ -220,7 +215,7 @@ resource "aws_lb_listener" "http" {
 #############################################
 
 resource "aws_ecs_service" "app" {
-  name            = "strapi-a3-service"
+  name            = local.service_name
   cluster         = aws_ecs_cluster.this.id
   task_definition = aws_ecs_task_definition.app.arn
   desired_count   = 1
@@ -234,7 +229,7 @@ resource "aws_ecs_service" "app" {
 
   load_balancer {
     target_group_arn = aws_lb_target_group.app.arn
-    container_name   = "strapi-a1"
+    container_name   = local.container_name
     container_port   = 1337
   }
 

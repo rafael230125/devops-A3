@@ -8,6 +8,10 @@ on:
 jobs:
   terraform-deploy:
     runs-on: ubuntu-latest
+    env:
+      TF_IN_AUTOMATION: true
+      TF_INPUT: false
+      TF_VAR_image: ${{ secrets.ECR_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest
     steps:
       - uses: actions/checkout@v4
 
@@ -25,7 +29,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: infra/terraform
-        run: terraform init
+        run: terraform init -input=false
 
       - name: Import existing resources
         working-directory: infra/terraform
@@ -35,26 +39,26 @@ jobs:
           # Check IAM Role
           if aws iam get-role --role-name "ecsTaskExecutionRole-devops-a3-cluster" 2>/dev/null; then
             echo "✅ IAM Role found, importing..."
-            terraform import -auto-approve aws_iam_role.task_exec "ecsTaskExecutionRole-devops-a3-cluster" || true
+            terraform import aws_iam_role.task_exec "ecsTaskExecutionRole-devops-a3-cluster" || true
           fi
           
           # Check Target Group
-          TG_ARN=$(aws elbv2 describe-target-groups --names "strapi-a3-tg" --region us-east-1 --query 'TargetGroups[0].TargetGroupArn' --output text 2>/dev/null)
+          TG_ARN=$(aws elbv2 describe-target-groups --names "strapi-a3-tg" --region ${{ secrets.AWS_REGION }} --query 'TargetGroups[0].TargetGroupArn' --output text 2>/dev/null)
           if [ "$TG_ARN" != "None" ] && [ ! -z "$TG_ARN" ]; then
             echo "✅ Target Group found, importing..."
-            terraform import -auto-approve aws_lb_target_group.app "$TG_ARN" || true
+            terraform import aws_lb_target_group.app "$TG_ARN" || true
           fi
           
           # Check VPC
-          VPC_ID=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=devops-a3-vpc" --region us-east-1 --query 'Vpcs[0].VpcId' --output text 2>/dev/null)
+          VPC_ID=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=devops-a3-vpc" --region ${{ secrets.AWS_REGION }} --query 'Vpcs[0].VpcId' --output text 2>/dev/null)
           if [ "$VPC_ID" != "None" ] && [ ! -z "$VPC_ID" ]; then
             echo "✅ VPC found, importing..."
-            terraform import -auto-approve aws_vpc.main "$VPC_ID" || true
+            terraform import aws_vpc.main "$VPC_ID" || true
           fi
 
       - name: Terraform Plan
         working-directory: infra/terraform
-        run: terraform plan -var "image=${{ vars.ECR_REGISTRY }}/${{ vars.IMAGE_NAME }}:latest" -out=plan.tfplan
+        run: terraform plan -input=false -out=plan.tfplan
 
       - name: Terraform Apply
         working-directory: infra/terraform
